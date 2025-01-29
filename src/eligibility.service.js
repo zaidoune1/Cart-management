@@ -23,9 +23,76 @@ class EligibilityService {
     if (keys.length === 1) return cartSection[keys[0]];
     return this.getFieldFromCart(cartSection[keys[0]], keys.slice(1));
   }
-  isEligible(cart, criteria) {
-    // TODO: compute cart eligibility here.
-    return false;
+
+  /**
+   * Recursively checks if the field meets the provided condition.
+   *
+   * @param {any} cartFieldValue - The value of the field from the cart.
+   * @param {Object} condition - The condition to check against the field value.
+   * @return {boolean} - Returns true if the condition is satisfied, false otherwise.
+   *
+   */
+  evaluateCondition(cartFieldValue, condition) {
+    if (typeof condition !== "object") {
+      return cartFieldValue == condition;
+    }
+
+    const [conditionKey] = Object.keys(condition);
+
+    switch (conditionKey) {
+      case "gt":
+        return cartFieldValue > condition[conditionKey];
+      case "lt":
+        return cartFieldValue < condition[conditionKey];
+      case "gte":
+        return cartFieldValue >= condition[conditionKey];
+      case "lte":
+        return cartFieldValue <= condition[conditionKey];
+      case "and":
+        return Object.entries(condition[conditionKey]).every(([key, value]) =>
+          this.evaluateCondition(cartFieldValue, { [key]: value })
+        );
+      case "or":
+        return Object.entries(condition[conditionKey]).some(([key, value]) =>
+          this.evaluateCondition(cartFieldValue, { [key]: value })
+        );
+      case "in":
+        if (!Array.isArray(cartFieldValue)) {
+          return condition[conditionKey].includes(cartFieldValue);
+        }
+        return cartFieldValue.some((item) =>
+          condition[conditionKey].includes(item)
+        );
+      default:
+        throw new Error(`Unknown condition: ${conditionKey}`);
+    }
+  }
+
+  /**
+   * Verifies if a specific condition is fulfilled for a given cart and key.
+   *
+   * @param {Object} cartData - The data of the cart to evaluate.
+   * @param {string} fieldPath - The path to the field in the cart.
+   * @param {Object} condition - The condition to validate against the field.
+   * @return {boolean} - Returns true if the condition is satisfied, false otherwise.
+   */
+  evaluateConditionForCart(cartData, fieldPath, condition) {
+    const fieldValue = this.getFieldFromCart(cartData, fieldPath.split("."));
+    return this.evaluateCondition(fieldValue, condition);
+  }
+
+  /**
+   * Determines if the cart meets all eligibility criteria.
+   * Returns false if any condition is not met.
+   *
+   * @param {Object} cartData - The cart data to assess.
+   * @param {Object} conditions - The conditions the cart must satisfy.
+   * @return {boolean} - Returns true if the cart meets the criteria, false otherwise.
+   */
+  isEligible(cartData, conditions) {
+    return Object.entries(conditions).every(([field, condition]) =>
+      this.evaluateConditionForCart(cartData, field, condition)
+    );
   }
 }
 
