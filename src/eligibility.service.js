@@ -13,13 +13,15 @@ class EligibilityService {
    * @param {Array} keys - The path representing the keys to the target field.
    * @return {any} - The value of the field, or throws an error if not found.
    */
+
   getFieldFromCart(cartSection, keys) {
     if (!cartSection || !cartSection.hasOwnProperty(keys[0])) {
       if (Array.isArray(cartSection)) {
         return cartSection.map((item) => item[keys[0]]);
       }
-      throw new Error(`Key not found: ${keys[0]}`);
+      console.log(`Warning: Key not found: ${keys[0]}`);
     }
+
     if (keys.length === 1) return cartSection[keys[0]];
     return this.getFieldFromCart(cartSection[keys[0]], keys.slice(1));
   }
@@ -29,9 +31,10 @@ class EligibilityService {
    *
    * @param {any} cartFieldValue - The value of the field from the cart.
    * @param {Object} condition - The condition to check against the field value.
-   * @return {boolean} - Returns true if the condition is satisfied, false otherwise.
+   * @return {boolean} - Returns true if the condition is satisfied,otherwise return false.
    *
    */
+
   evaluateCondition(cartFieldValue, condition) {
     if (typeof condition !== "object") {
       return cartFieldValue == condition;
@@ -60,11 +63,14 @@ class EligibilityService {
         if (!Array.isArray(cartFieldValue)) {
           return condition[conditionKey].includes(cartFieldValue);
         }
+
         return cartFieldValue.some((item) =>
           condition[conditionKey].includes(item)
         );
+
       default:
-        throw new Error(`Unknown condition: ${conditionKey}`);
+        console.log(`Warning: Unknown condition: ${conditionKey}`);
+        return false;
     }
   }
 
@@ -74,7 +80,7 @@ class EligibilityService {
    * @param {Object} cartData - The data of the cart to evaluate.
    * @param {string} fieldPath - The path to the field in the cart.
    * @param {Object} condition - The condition to validate against the field.
-   * @return {boolean} - Returns true if the condition is satisfied, false otherwise.
+   * @return {boolean} - Returns true if the condition is satisfied, otherwise return false.
    */
   evaluateConditionForCart(cartData, fieldPath, condition) {
     const fieldValue = this.getFieldFromCart(cartData, fieldPath.split("."));
@@ -87,8 +93,9 @@ class EligibilityService {
    *
    * @param {Object} cartData - The cart data to assess.
    * @param {Object} conditions - The conditions the cart must satisfy.
-   * @return {boolean} - Returns true if the cart meets the criteria, false otherwise.
+   * @return {boolean} - Returns true if the cart meets the criteria, otherwise return false.
    */
+
   isEligible(cartData, conditions) {
     return Object.entries(conditions).every(([field, condition]) =>
       this.evaluateConditionForCart(cartData, field, condition)
